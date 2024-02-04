@@ -9,11 +9,12 @@
     "start": "PORT=8000 node src/server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Dmitriy Korytnyi",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
