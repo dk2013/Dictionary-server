@@ -102,4 +102,10 @@ const dictionary = {
   },
 };
 
-module.exports = dictionary;
+function getDictionary() {
+  return dictionary;
+}
+
+module.exports = {
+  getDictionary,
+};
