@@ -15,7 +15,7 @@ app.use(
     origin: BASE_CLIENT_URL,
   })
 );
-app.use(morgan("short"));
+app.use(morgan("combined"));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(dictionariesRouter);
