@@ -1,7 +1,8 @@
 const dictionaries = require("../../models/dictionaries.model");
 
-function getDictionary(req, res) {
-  return res.status(200).json(dictionaries.getDictionary());
+async function getDictionary(req, res) {
+  const { id } = req.params;
+  return await dictionaries.getDictionary(req, res, id);
 }
 
 module.exports = {

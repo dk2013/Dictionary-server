@@ -1,3 +1,4 @@
+/*
 const dictionary = {
   ENG: {
     water: {
@@ -101,9 +102,60 @@ const dictionary = {
     },
   },
 };
+*/
 
-function getDictionary() {
-  return dictionary;
+const mongoose = require("mongoose");
+
+// const DictionarySchema = new mongoose.Schema({
+//   dictionary: {
+//     language: { type: String, required: true },
+//     word: { type: String, required: true },
+//     translations: [
+//       {
+//         language: { type: String, required: true },
+//         translation: { type: String, required: true },
+//         modified: { type: Date, default: Date.now },
+//         order: { type: Number, required: true },
+//       },
+//     ]
+//   },
+//   user_id: { type: mongoose.Schema.Types.ObjectId, required: true }
+// });
+
+// Schema for individual translations
+const TranslationSchema = new mongoose.Schema({
+  translation: { type: String, required: true },
+  modified: { type: Date, required: true },
+  order: { type: Number, required: true },
+});
+
+// Schema for a dynamic language object (e.g., RUS, ENG, ESP, etc.)
+const LanguageSchema = new mongoose.Schema({
+  type: Map,
+  of: [TranslationSchema], // Each key (e.g., RUS) maps to an array of translations
+});
+
+// Schema for the entire dictionary
+const DictionarySchema = new mongoose.Schema({
+  type: Map,
+  of: LanguageSchema, // Each key (e.g., ENG, RUS) maps to a LanguageSchema
+});
+
+// Main schema for the dictionaries collection
+const DictionariesSchema = new mongoose.Schema({
+  dictionary: DictionarySchema,
+  user_id: { type: mongoose.Schema.Types.ObjectId, required: true },
+});
+
+const Dictionary = mongoose.model("Dictionary", DictionariesSchema);
+
+async function getDictionary(req, res, id) {
+  try {
+    const dictionaryObj = await Dictionary.findById(id);
+    res.status(200).json(dictionaryObj?.dictionary);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 }
 
 module.exports = {

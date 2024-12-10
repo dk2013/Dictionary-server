@@ -2,12 +2,16 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
+const connectDB = require("./config/db");
+require('dotenv').config();
 
 const dictionariesRouter = require("./routes/dictionaries/dictionaries.router");
 
 const app = express();
 
 const BASE_CLIENT_URL = "http://localhost:3000";
+
+connectDB();
 
 // Middlewares
 app.use(
