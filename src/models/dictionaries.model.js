@@ -246,27 +246,41 @@ async function saveTranslation(req, res, id) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
-    const sourceLang = dictionaryObj.dictionary[translationFrom] || {};
-    const wordTranslations = sourceLang[newWord] || {};
-    const translationsArray = wordTranslations[translationTo] || [];
+    const previousTranslation = getPreviousTranslation(
+      dictionaryObj.dictionary,
+      newWord,
+      translation,
+      translationFrom,
+      translationTo
+    );
+    console.log(
+      "dictionaryObj.dictionary[translationTo][translation]",
+      dictionaryObj.dictionary[translationTo][translation]
+    );
+    console.log("dictionaryObj.dictionary", dictionaryObj.dictionary);
 
-    if (translationsArray.length === 0) {
-      translationsArray.push({ translation, modified: new Date(), order: 1 });
-    } else {
-      translationsArray[0] = {
-        ...translationsArray[0],
-        translation,
-        modified: new Date(),
-      };
+    // Delete previous reverse translation
+    if (previousTranslation) {
+      delete dictionaryObj.dictionary[translationTo][previousTranslation];
     }
 
-    dictionaryObj.dictionary[translationFrom] = {
-      ...sourceLang,
-      [newWord]: {
-        ...wordTranslations,
-        [translationTo]: translationsArray,
-      },
-    };
+    // Save direct translation
+    dictionaryObj.dictionary[translationFrom] = prepareTranslationObjectForSave(
+      dictionaryObj.dictionary,
+      newWord,
+      translation,
+      translationFrom,
+      translationTo
+    );
+
+    // Save reversed translation
+    dictionaryObj.dictionary[translationTo] = prepareTranslationObjectForSave(
+      dictionaryObj.dictionary,
+      translation,
+      newWord,
+      translationTo,
+      translationFrom
+    );
 
     dictionaryObj.markModified("dictionary");
     await dictionaryObj.save();
@@ -281,10 +295,53 @@ async function saveTranslation(req, res, id) {
   }
 }
 
+function prepareTranslationObjectForSave(
+  dictionary,
+  newWord,
+  translation,
+  translationFrom,
+  translationTo
+) {
+  const sourceLang = dictionary[translationFrom] || {};
+  const wordTranslations = sourceLang[newWord] || {};
+  const translationsArray = wordTranslations[translationTo] || [];
+
+  if (translationsArray.length === 0) {
+    translationsArray.push({ translation, modified: new Date(), order: 1 });
+  } else {
+    translationsArray[0] = {
+      ...translationsArray[0],
+      translation,
+      modified: new Date(),
+    };
+  }
+
+  return {
+    ...sourceLang,
+    [newWord]: {
+      ...wordTranslations,
+      [translationTo]: translationsArray,
+    },
+  };
+}
+
+function getPreviousTranslation(
+  dictionary,
+  newWord,
+  translation,
+  translationFrom,
+  translationTo
+) {
+  if (
+    dictionary[translationFrom]?.[newWord]?.[translationTo]?.[0]?.translation
+  ) {
+    return dictionary[translationFrom][newWord][translationTo][0].translation;
+  }
+}
+
 module.exports = {
   getDictionary,
   saveTranslation,
-  Dictionary,
   createTranslationFrom,
   createDictionary,
 };
