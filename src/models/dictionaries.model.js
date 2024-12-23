@@ -246,51 +246,27 @@ async function saveTranslation(req, res, id) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
-    // Ensure the source language exists
-    if (!(translationFrom in dictionaryObj.dictionary)) {
-      dictionaryObj.dictionary[translationFrom] = {
-        [newWord]: {
-          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
-        },
-      };
+    const sourceLang = dictionaryObj.dictionary[translationFrom] || {};
+    const wordTranslations = sourceLang[newWord] || {};
+    const translationsArray = wordTranslations[translationTo] || [];
+
+    if (translationsArray.length === 0) {
+      translationsArray.push({ translation, modified: new Date(), order: 1 });
     } else {
-      if (!(newWord in dictionaryObj.dictionary[translationFrom])) {
-        dictionaryObj.dictionary[translationFrom][newWord] = {
-          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
-        };
-      } else {
-        if (
-          !(translationTo in dictionaryObj.dictionary[translationFrom][newWord])
-        ) {
-          dictionaryObj.dictionary[translationFrom][newWord][translationTo] = [
-            { translation, modified: new Date(), order: 1 },
-          ];
-        } else {
-          if (
-            !(
-              "translation" in
-              dictionaryObj.dictionary[translationFrom][newWord][
-                translationTo
-              ][0]
-            )
-          ) {
-            dictionaryObj.dictionary[translationFrom][newWord][translationTo] =
-              [{ translation, modified: new Date(), order: 1 }];
-          } else {
-            // Overwrite the existing translation (1st element in the array for now)
-            dictionaryObj.dictionary[translationFrom][newWord][
-              translationTo
-            ][0] = {
-              ...dictionaryObj.dictionary[translationFrom][newWord][
-                translationTo
-              ][0],
-              translation,
-              modified: new Date(),
-            };
-          }
-        }
-      }
+      translationsArray[0] = {
+        ...translationsArray[0],
+        translation,
+        modified: new Date(),
+      };
     }
+
+    dictionaryObj.dictionary[translationFrom] = {
+      ...sourceLang,
+      [newWord]: {
+        ...wordTranslations,
+        [translationTo]: translationsArray,
+      },
+    };
 
     dictionaryObj.markModified("dictionary");
     await dictionaryObj.save();
