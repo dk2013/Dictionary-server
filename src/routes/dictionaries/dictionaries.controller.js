@@ -12,7 +12,7 @@ async function saveTranslation(req, res) {
 
 async function createTranslateFrom(req, res) {
   const { id } = req.params;
-  return await dictionaries.createTranslateFrom(req, res, id);
+  return await dictionaries.createTranslationFrom(req, res, id);
 }
 
 async function createDictionary(req, res) {

@@ -108,16 +108,16 @@ const mongoose = require("mongoose");
 
 const TranslationSchema = new mongoose.Schema(
   {
-    translation: { type: String, required: true },
-    modified: { type: Date, required: true },
-    order: { type: Number, required: true },
+    translation: { type: String, required: false },
+    modified: { type: Date, required: false },
+    order: { type: Number, required: false },
   },
   { _id: false }
 );
 
 const TranslationToSchema = new mongoose.Schema(
   {
-    type: Map,
+    type: Object,
     of: [TranslationSchema], // Keys like 'RUS', 'ESP' map to arrays of translations
   },
   { _id: false }
@@ -125,21 +125,22 @@ const TranslationToSchema = new mongoose.Schema(
 
 const WordSchema = new mongoose.Schema(
   {
-    type: Map,
+    type: Object,
     of: TranslationToSchema, // Keys like 'water' map to a TranslationToSchema
   },
   { _id: false }
 );
 
-const TranslationFromSchema = new mongoose.Schema({
-  type: Map,
-  of: WordSchema, // Keys like 'ENG' or 'RUS' map to WordSchema
-  _id: false,
-});
-
+const TranslationFromSchema = new mongoose.Schema(
+  {
+    type: Object,
+    of: WordSchema, // Keys like 'ENG' or 'RUS' map to WordSchema
+  },
+  { _id: false }
+);
 // Main schema for the dictionaries collection
 const DictionarySchema = new mongoose.Schema({
-  dictionary: { type: Map, of: TranslationFromSchema, required: true },
+  dictionary: { type: Object, of: TranslationFromSchema, required: true },
   user_id: { type: mongoose.Schema.Types.ObjectId, required: true },
 });
 
@@ -154,7 +155,8 @@ async function getDictionary(req, res, id) {
   }
 }
 
-async function createTranslateFrom(req, res, id) {
+// This method is for testing
+async function createTranslationFrom(req, res, id) {
   try {
     const dictionaryObj = await Dictionary.findById(id);
 
@@ -168,20 +170,19 @@ async function createTranslateFrom(req, res, id) {
       dictionaryObj instanceof Map
     );
 
-    if (
-      !dictionaryObj?.dictionary ||
-      !(dictionaryObj?.dictionary instanceof Map)
-    ) {
-      return res
-        .status(404)
-        .json({ message: "Dictionary property is not set" });
-    }
+    const translationFrom = "ENG";
 
-    const translateFrom = "ENG";
+    // Ensure the source language exists
+    if (!dictionaryObj.dictionary[translationFrom]) {
+      console.log("here - updating");
 
-    // Ensure the source language map exists
-    if (!dictionaryObj.dictionary.has(translateFrom)) {
-      dictionaryObj.dictionary.set(translateFrom, new Map());
+      dictionaryObj.dictionary[translationFrom] = {
+        word1: new Map([
+          ["RUS", [{ translation: "tran555", modified: new Date(), order: 1 }]],
+        ]),
+      };
+
+      console.log("dictionaryObj.dictionary:", dictionaryObj.dictionary);
     }
 
     // Mark dictionary field as modified
@@ -200,6 +201,7 @@ async function createTranslateFrom(req, res, id) {
   }
 }
 
+// This method is for testing
 async function createDictionary(req, res, userId) {
   try {
     // Create a new document with an empty dictionary Map
@@ -225,93 +227,72 @@ async function createDictionary(req, res, userId) {
 async function saveTranslation(req, res, id) {
   console.log("id:", id);
 
-  const { newWord, translation, translateFrom, translateTo } = req.body;
-  console.log("req.body:", newWord, translation, translateFrom, translateTo);
+  const { newWord, translation, translationFrom, translationTo } = req.body;
+  console.log(
+    "req.body:",
+    newWord,
+    translation,
+    translationFrom,
+    translationTo
+  );
 
   try {
     const dictionaryObj = await Dictionary.findById(id);
-
     if (!dictionaryObj) {
       return res.status(404).json({ message: "Dictionary not found" });
     }
 
-    // If dictionary doesn't exist yet, initialize it
-    // if (!dictionaryObj.dictionary) {
-    //   dictionaryObj.dictionary = new Map();
-    // }
-
-    let dictionary = dictionaryObj.dictionary;
-
-    console.log("dictionary instanceof Map:", dictionary instanceof Map);
-
-    // If dictionary is missing or not a Map, convert it
-    if (!dictionary || !(dictionary instanceof Map)) {
-      dictionaryObj.dictionary = new Map(Object.entries(dictionary || {}));
-      dictionaryObj.dictionary = dictionary;
+    if (!"dictionary" in dictionaryObj) {
+      return res.status(404).json({ message: "dictionary property is empty" });
     }
 
-    console.log(
-      "dictionaryObj.dictionary instanceof Map:",
-      dictionaryObj.dictionary instanceof Map
-    );
-    console.log("dictionaryObj.dictionary", dictionaryObj.dictionary);
-
-    // Ensure the source language map exists
-    if (!dictionaryObj.dictionary.has(translateFrom)) {
-      dictionaryObj.dictionary.set(translateFrom, new Map());
-    }
-    const fromMap = dictionaryObj.dictionary.get(translateFrom);
-
-    // Ensure the word map exists
-    if (!fromMap.has(newWord)) {
-      // If the new word doesn't exist, we create a new Map for it
-      // The value is a Map from target language (translateTo) to an array of translations
-      const newWordMap = new Map();
-
-      // Initialize the target language array of translations
-      newWordMap.set(translateTo, [
-        {
-          translation: translation,
-          modified: new Date(),
-          order: 1,
+    // Ensure the source language exists
+    if (!(translationFrom in dictionaryObj.dictionary)) {
+      dictionaryObj.dictionary[translationFrom] = {
+        [newWord]: {
+          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
         },
-      ]);
-
-      fromMap.set(newWord, newWordMap);
+      };
     } else {
-      // If the word exists, we add or update the translation
-      const wordMap = fromMap.get(newWord);
-
-      if (!wordMap.has(translateTo)) {
-        wordMap.set(translateTo, [
-          {
-            translation: translation,
-            modified: new Date(),
-            order: 1,
-          },
-        ]);
+      if (!(newWord in dictionaryObj.dictionary[translationFrom])) {
+        dictionaryObj.dictionary[translationFrom][newWord] = {
+          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
+        };
       } else {
-        const translations = wordMap.get(translateTo);
-        // Check if translation already exists
-        const existing = translations.find(
-          (t) => t.translation === translation
-        );
-        if (existing) {
-          existing.modified = new Date();
+        if (
+          !(translationTo in dictionaryObj.dictionary[translationFrom][newWord])
+        ) {
+          dictionaryObj.dictionary[translationFrom][newWord][translationTo] = [
+            { translation, modified: new Date(), order: 1 },
+          ];
         } else {
-          translations.push({
-            translation: translation,
-            modified: new Date(),
-            order: translations.length + 1,
-          });
+          if (
+            !(
+              "translation" in
+              dictionaryObj.dictionary[translationFrom][newWord][
+                translationTo
+              ][0]
+            )
+          ) {
+            dictionaryObj.dictionary[translationFrom][newWord][translationTo] =
+              [{ translation, modified: new Date(), order: 1 }];
+          } else {
+            // Overwrite the existing translation (1st element in the array for now)
+            dictionaryObj.dictionary[translationFrom][newWord][
+              translationTo
+            ][0] = {
+              ...dictionaryObj.dictionary[translationFrom][newWord][
+                translationTo
+              ][0],
+              translation,
+              modified: new Date(),
+            };
+          }
         }
       }
     }
 
-    // Mark dictionary field as modified
     dictionaryObj.markModified("dictionary");
-
-    // Save the updated document
     await dictionaryObj.save();
 
     res.status(200).json({
@@ -328,6 +309,6 @@ module.exports = {
   getDictionary,
   saveTranslation,
   Dictionary,
-  createTranslateFrom,
+  createTranslationFrom,
   createDictionary,
 };
