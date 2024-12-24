@@ -225,16 +225,7 @@ async function createDictionary(req, res, userId) {
 }
 
 async function saveTranslation(req, res, id) {
-  console.log("id:", id);
-
   const { newWord, translation, translationFrom, translationTo } = req.body;
-  console.log(
-    "req.body:",
-    newWord,
-    translation,
-    translationFrom,
-    translationTo
-  );
 
   try {
     const dictionaryObj = await Dictionary.findById(id);
@@ -246,22 +237,16 @@ async function saveTranslation(req, res, id) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
-    const previousTranslation = getPreviousTranslation(
+    const currentTranslation = getCurrentTranslation(
       dictionaryObj.dictionary,
       newWord,
-      translation,
       translationFrom,
       translationTo
     );
-    console.log(
-      "dictionaryObj.dictionary[translationTo][translation]",
-      dictionaryObj.dictionary[translationTo][translation]
-    );
-    console.log("dictionaryObj.dictionary", dictionaryObj.dictionary);
 
-    // Delete previous reverse translation
-    if (previousTranslation) {
-      delete dictionaryObj.dictionary[translationTo][previousTranslation];
+    // Delete current reversed translation
+    if (currentTranslation) {
+      delete dictionaryObj.dictionary[translationTo][currentTranslation];
     }
 
     // Save direct translation
@@ -281,6 +266,61 @@ async function saveTranslation(req, res, id) {
       translationTo,
       translationFrom
     );
+
+    dictionaryObj.markModified("dictionary");
+    await dictionaryObj.save();
+
+    res.status(200).json({
+      message: "Translation saved successfully",
+      dictionary: dictionaryObj.dictionary,
+    });
+  } catch (e) {
+    console.error("Error:", e);
+    res.status(500).json({ message: e.message });
+  }
+}
+
+async function deleteTranslation(req, res, id) {
+  const { newWord, translationFrom, translationTo } = req.query;
+
+  console.log("params:", { newWord, translationFrom, translationTo });
+
+  try {
+    const dictionaryObj = await Dictionary.findById(id);
+    if (!dictionaryObj) {
+      return res.status(404).json({ message: "Dictionary not found" });
+    }
+
+    if (!"dictionary" in dictionaryObj) {
+      return res.status(404).json({ message: "dictionary property is empty" });
+    }
+
+    const currentTranslation = getCurrentTranslation(
+      dictionaryObj.dictionary,
+      newWord,
+      translationFrom,
+      translationTo
+    );
+
+    // Delete current direct translation
+    if (translationFrom in dictionaryObj.dictionary) {
+      if (newWord in dictionaryObj.dictionary[translationFrom]) {
+        delete dictionaryObj.dictionary[translationFrom][newWord];
+      }
+
+      if (!Object.keys(dictionaryObj.dictionary[translationFrom]).length) {
+        delete dictionaryObj.dictionary[translationFrom];
+      }
+    }
+
+    // Delete current reversed translation
+    if (currentTranslation) {
+      delete dictionaryObj.dictionary[translationTo][currentTranslation];
+
+      if (!Object.keys(dictionaryObj.dictionary[translationTo]).length) {
+        delete dictionaryObj.dictionary[translationTo];
+      }
+    }
 
     dictionaryObj.markModified("dictionary");
     await dictionaryObj.save();
@@ -325,10 +365,9 @@ function prepareTranslationObjectForSave(
   };
 }
 
-function getPreviousTranslation(
+function getCurrentTranslation(
   dictionary,
   newWord,
-  translation,
   translationFrom,
   translationTo
 ) {
@@ -342,6 +381,7 @@ function getPreviousTranslation(
 module.exports = {
   getDictionary,
   saveTranslation,
+  deleteTranslation,
   createTranslationFrom,
   createDictionary,
 };

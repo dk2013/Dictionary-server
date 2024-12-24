@@ -10,6 +10,11 @@ async function saveTranslation(req, res) {
   return await dictionaries.saveTranslation(req, res, id);
 }
 
+async function deleteTranslation(req, res) {
+  const { id } = req.params;
+  return await dictionaries.deleteTranslation(req, res, id);
+}
+
 async function createTranslateFrom(req, res) {
   const { id } = req.params;
   return await dictionaries.createTranslationFrom(req, res, id);
@@ -23,6 +28,7 @@ async function createDictionary(req, res) {
 module.exports = {
   getDictionary,
   saveTranslation,
+  deleteTranslation,
   createTranslateFrom,
   createDictionary,
 };
