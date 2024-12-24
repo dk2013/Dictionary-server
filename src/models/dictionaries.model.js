@@ -250,7 +250,7 @@ async function saveTranslation(req, res, id) {
     }
 
     // Save direct translation
-    dictionaryObj.dictionary[translationFrom] = prepareTranslationObjectForSave(
+    dictionaryObj.dictionary[translationFrom] = prepareTranslationObjectToSave(
       dictionaryObj.dictionary,
       newWord,
       translation,
@@ -259,7 +259,7 @@ async function saveTranslation(req, res, id) {
     );
 
     // Save reversed translation
-    dictionaryObj.dictionary[translationTo] = prepareTranslationObjectForSave(
+    dictionaryObj.dictionary[translationTo] = prepareTranslationObjectToSave(
       dictionaryObj.dictionary,
       translation,
       newWord,
@@ -335,7 +335,7 @@ async function deleteTranslation(req, res, id) {
   }
 }
 
-function prepareTranslationObjectForSave(
+function prepareTranslationObjectToSave(
   dictionary,
   newWord,
   translation,
