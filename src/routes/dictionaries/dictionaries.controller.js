@@ -1,4 +1,4 @@
-const dictionaries = require("../../models/dictionaries.model");
+const dictionaries = require("../../models/dictionary.model");
 
 async function getDictionary(req, res) {
   const { id } = req.params;
