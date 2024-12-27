@@ -1,5 +1,3 @@
-// import helmet from "helmet";
-
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
