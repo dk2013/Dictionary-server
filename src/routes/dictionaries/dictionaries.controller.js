@@ -1,4 +1,4 @@
-const dictionaries = require("../../models/dictionaries.model");
+const dictionaries = require("../../models/dictionary.model");
 
 async function getDictionary(req, res) {
   const { id } = req.params;
@@ -8,6 +8,11 @@ async function getDictionary(req, res) {
 async function saveTranslation(req, res) {
   const { id } = req.params;
   return await dictionaries.saveTranslation(req, res, id);
+}
+
+async function deleteTranslation(req, res) {
+  const { id } = req.params;
+  return await dictionaries.deleteTranslation(req, res, id);
 }
 
 async function createTranslateFrom(req, res) {
@@ -23,6 +28,7 @@ async function createDictionary(req, res) {
 module.exports = {
   getDictionary,
   saveTranslation,
+  deleteTranslation,
   createTranslateFrom,
   createDictionary,
 };

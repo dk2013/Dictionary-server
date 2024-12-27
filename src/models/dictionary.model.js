@@ -225,16 +225,7 @@ async function createDictionary(req, res, userId) {
 }
 
 async function saveTranslation(req, res, id) {
-  console.log("id:", id);
-
   const { newWord, translation, translationFrom, translationTo } = req.body;
-  console.log(
-    "req.body:",
-    newWord,
-    translation,
-    translationFrom,
-    translationTo
-  );
 
   try {
     const dictionaryObj = await Dictionary.findById(id);
@@ -246,49 +237,88 @@ async function saveTranslation(req, res, id) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
-    // Ensure the source language exists
-    if (!(translationFrom in dictionaryObj.dictionary)) {
-      dictionaryObj.dictionary[translationFrom] = {
-        [newWord]: {
-          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
-        },
-      };
-    } else {
-      if (!(newWord in dictionaryObj.dictionary[translationFrom])) {
-        dictionaryObj.dictionary[translationFrom][newWord] = {
-          [translationTo]: [{ translation, modified: new Date(), order: 1 }],
-        };
-      } else {
-        if (
-          !(translationTo in dictionaryObj.dictionary[translationFrom][newWord])
-        ) {
-          dictionaryObj.dictionary[translationFrom][newWord][translationTo] = [
-            { translation, modified: new Date(), order: 1 },
-          ];
-        } else {
-          if (
-            !(
-              "translation" in
-              dictionaryObj.dictionary[translationFrom][newWord][
-                translationTo
-              ][0]
-            )
-          ) {
-            dictionaryObj.dictionary[translationFrom][newWord][translationTo] =
-              [{ translation, modified: new Date(), order: 1 }];
-          } else {
-            // Overwrite the existing translation (1st element in the array for now)
-            dictionaryObj.dictionary[translationFrom][newWord][
-              translationTo
-            ][0] = {
-              ...dictionaryObj.dictionary[translationFrom][newWord][
-                translationTo
-              ][0],
-              translation,
-              modified: new Date(),
-            };
-          }
-        }
+    const currentTranslation = getCurrentTranslation(
+      dictionaryObj.dictionary,
+      newWord,
+      translationFrom,
+      translationTo
+    );
+
+    // Delete current reversed translation
+    if (currentTranslation) {
+      delete dictionaryObj.dictionary[translationTo][currentTranslation];
+    }
+
+    // Save direct translation
+    dictionaryObj.dictionary[translationFrom] = prepareTranslationObjectToSave(
+      dictionaryObj.dictionary,
+      newWord,
+      translation,
+      translationFrom,
+      translationTo
+    );
+
+    // Save reversed translation
+    dictionaryObj.dictionary[translationTo] = prepareTranslationObjectToSave(
+      dictionaryObj.dictionary,
+      translation,
+      newWord,
+      translationTo,
+      translationFrom
+    );
+
+    dictionaryObj.markModified("dictionary");
+    await dictionaryObj.save();
+
+    res.status(200).json({
+      message: "Translation saved successfully",
+      dictionary: dictionaryObj.dictionary,
+    });
+  } catch (e) {
+    console.error("Error:", e);
+    res.status(500).json({ message: e.message });
+  }
+}
+
+async function deleteTranslation(req, res, id) {
+  const { newWord, translationFrom, translationTo } = req.query;
+
+  console.log("params:", { newWord, translationFrom, translationTo });
+
+  try {
+    const dictionaryObj = await Dictionary.findById(id);
+    if (!dictionaryObj) {
+      return res.status(404).json({ message: "Dictionary not found" });
+    }
+
+    if (!"dictionary" in dictionaryObj) {
+      return res.status(404).json({ message: "dictionary property is empty" });
+    }
+
+    const currentTranslation = getCurrentTranslation(
+      dictionaryObj.dictionary,
+      newWord,
+      translationFrom,
+      translationTo
+    );
+
+    // Delete current direct translation
+    if (translationFrom in dictionaryObj.dictionary) {
+      if (newWord in dictionaryObj.dictionary[translationFrom]) {
+        delete dictionaryObj.dictionary[translationFrom][newWord];
+      }
+
+      if (!Object.keys(dictionaryObj.dictionary[translationFrom]).length) {
+        delete dictionaryObj.dictionary[translationFrom];
+      }
+    }
+
+    // Delete current reversed translation
+    if (currentTranslation) {
+      delete dictionaryObj.dictionary[translationTo][currentTranslation];
+
+      if (!Object.keys(dictionaryObj.dictionary[translationTo]).length) {
+        delete dictionaryObj.dictionary[translationTo];
       }
     }
 
@@ -305,10 +335,53 @@ async function saveTranslation(req, res, id) {
   }
 }
 
+function prepareTranslationObjectToSave(
+  dictionary,
+  newWord,
+  translation,
+  translationFrom,
+  translationTo
+) {
+  const sourceLang = dictionary[translationFrom] || {};
+  const wordTranslations = sourceLang[newWord] || {};
+  const translationsArray = wordTranslations[translationTo] || [];
+
+  if (translationsArray.length === 0) {
+    translationsArray.push({ translation, modified: new Date(), order: 1 });
+  } else {
+    translationsArray[0] = {
+      ...translationsArray[0],
+      translation,
+      modified: new Date(),
+    };
+  }
+
+  return {
+    ...sourceLang,
+    [newWord]: {
+      ...wordTranslations,
+      [translationTo]: translationsArray,
+    },
+  };
+}
+
+function getCurrentTranslation(
+  dictionary,
+  newWord,
+  translationFrom,
+  translationTo
+) {
+  if (
+    dictionary[translationFrom]?.[newWord]?.[translationTo]?.[0]?.translation
+  ) {
+    return dictionary[translationFrom][newWord][translationTo][0].translation;
+  }
+}
+
 module.exports = {
   getDictionary,
   saveTranslation,
-  Dictionary,
+  deleteTranslation,
   createTranslationFrom,
   createDictionary,
 };
