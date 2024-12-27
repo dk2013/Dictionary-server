@@ -9,10 +9,12 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/auth/google/callback",
+      callbackURL: `${process.env.BASE_CLIENT_URL}/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        // console.log("profile", profile);
+
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
           user = new User({
@@ -26,8 +28,8 @@ passport.use(
       } catch (err) {
         done(err, null);
       }
-    }
-  )
+    },
+  ),
 );
 
 passport.serializeUser((user, done) => {

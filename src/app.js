@@ -1,7 +1,10 @@
+// import helmet from "helmet";
+
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
 const morgan = require("morgan");
+const helmet = require("helmet");
 const path = require("path");
 const connectDB = require("./config/db");
 const passport = require("./config/passport");
@@ -17,19 +20,19 @@ const BASE_CLIENT_URL = process.env.BASE_CLIENT_URL;
 connectDB();
 
 // Middlewares
+// app.use(helmet()); // TODO: Uncomment this line for production
 app.use(
   cors({
     origin: BASE_CLIENT_URL,
-  })
+  }),
 );
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-  })
+  }),
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 

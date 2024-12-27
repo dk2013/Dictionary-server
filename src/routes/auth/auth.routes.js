@@ -7,7 +7,7 @@ const authRouter = express.Router();
 // Initiates Google OAuth flow
 authRouter.get(
   "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 
 // Callback URL that Google will redirect to after user consents
@@ -16,8 +16,10 @@ authRouter.get(
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
     // Successful authentication
+    // res.json(req.user);
+
     res.redirect("/"); // Or wherever you want
-  }
+  },
 );
 
 // Logout route
