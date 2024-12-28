@@ -13,12 +13,14 @@ authRouter.get(
 // Callback URL that Google will redirect to after user consents
 authRouter.get(
   "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
+  passport.authenticate("google", {
+    failureRedirect: process.env.BASE_CLIENT_URL,
+    successRedirect: process.env.BASE_CLIENT_URL,
+    // session: true, // It's not necessary to specify this option, because the default value is true
+  }),
   (req, res) => {
     // Successful authentication
-    // res.json(req.user);
-
-    res.redirect("/"); // Or wherever you want
+    console.log("Google callback - auth success");
   },
 );
 
