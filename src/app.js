@@ -22,6 +22,7 @@ connectDB();
 app.use(
   cors({
     origin: BASE_CLIENT_URL,
+    credentials: true,
   }),
 );
 app.use(

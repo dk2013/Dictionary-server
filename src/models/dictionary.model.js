@@ -105,6 +105,7 @@ const dictionary = {
 */
 
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 
 const TranslationSchema = new mongoose.Schema(
   {
@@ -112,7 +113,7 @@ const TranslationSchema = new mongoose.Schema(
     modified: { type: Date, required: false },
     order: { type: Number, required: false },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const TranslationToSchema = new mongoose.Schema(
@@ -120,7 +121,7 @@ const TranslationToSchema = new mongoose.Schema(
     type: Object,
     of: [TranslationSchema], // Keys like 'RUS', 'ESP' map to arrays of translations
   },
-  { _id: false }
+  { _id: false },
 );
 
 const WordSchema = new mongoose.Schema(
@@ -128,7 +129,7 @@ const WordSchema = new mongoose.Schema(
     type: Object,
     of: TranslationToSchema, // Keys like 'water' map to a TranslationToSchema
   },
-  { _id: false }
+  { _id: false },
 );
 
 const TranslationFromSchema = new mongoose.Schema(
@@ -136,7 +137,7 @@ const TranslationFromSchema = new mongoose.Schema(
     type: Object,
     of: WordSchema, // Keys like 'ENG' or 'RUS' map to WordSchema
   },
-  { _id: false }
+  { _id: false },
 );
 // Main schema for the dictionaries collection
 const DictionarySchema = new mongoose.Schema({
@@ -155,6 +156,24 @@ async function getDictionary(req, res, id) {
   }
 }
 
+async function getDictionaryByUserId(req, res, userId) {
+  try {
+    const dictionaryObj = await Dictionary.findOne({
+      user_id: new ObjectId(userId),
+    });
+
+    if (!dictionaryObj) {
+      return res
+        .status(404)
+        .json({ message: "Dictionary not found for given user ID" });
+    }
+
+    res.status(200).json(dictionaryObj.dictionary);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
 // This method is for testing
 async function createTranslationFrom(req, res, id) {
   try {
@@ -167,7 +186,7 @@ async function createTranslationFrom(req, res, id) {
     console.log("dictionaryObj:", dictionaryObj);
     console.log(
       "dictionaryObj instanceof Map (bool):",
-      dictionaryObj instanceof Map
+      dictionaryObj instanceof Map,
     );
 
     const translationFrom = "ENG";
@@ -233,7 +252,7 @@ async function saveTranslation(req, res, id) {
       return res.status(404).json({ message: "Dictionary not found" });
     }
 
-    if (!"dictionary" in dictionaryObj) {
+    if ((!"dictionary") in dictionaryObj) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
@@ -241,7 +260,7 @@ async function saveTranslation(req, res, id) {
       dictionaryObj.dictionary,
       newWord,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Delete current reversed translation
@@ -255,7 +274,7 @@ async function saveTranslation(req, res, id) {
       newWord,
       translation,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Save reversed translation
@@ -264,7 +283,7 @@ async function saveTranslation(req, res, id) {
       translation,
       newWord,
       translationTo,
-      translationFrom
+      translationFrom,
     );
 
     dictionaryObj.markModified("dictionary");
@@ -291,7 +310,7 @@ async function deleteTranslation(req, res, id) {
       return res.status(404).json({ message: "Dictionary not found" });
     }
 
-    if (!"dictionary" in dictionaryObj) {
+    if ((!"dictionary") in dictionaryObj) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
@@ -299,7 +318,7 @@ async function deleteTranslation(req, res, id) {
       dictionaryObj.dictionary,
       newWord,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Delete current direct translation
@@ -340,7 +359,7 @@ function prepareTranslationObjectToSave(
   newWord,
   translation,
   translationFrom,
-  translationTo
+  translationTo,
 ) {
   const sourceLang = dictionary[translationFrom] || {};
   const wordTranslations = sourceLang[newWord] || {};
@@ -369,7 +388,7 @@ function getCurrentTranslation(
   dictionary,
   newWord,
   translationFrom,
-  translationTo
+  translationTo,
 ) {
   if (
     dictionary[translationFrom]?.[newWord]?.[translationTo]?.[0]?.translation
@@ -380,6 +399,7 @@ function getCurrentTranslation(
 
 module.exports = {
   getDictionary,
+  getDictionaryByUserId,
   saveTranslation,
   deleteTranslation,
   createTranslationFrom,
