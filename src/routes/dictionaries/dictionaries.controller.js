@@ -5,6 +5,11 @@ async function getDictionary(req, res) {
   return await dictionaries.getDictionary(req, res, id);
 }
 
+async function getDictionaryByUserId(req, res) {
+  const userId = req.params.id;
+  return await dictionaries.getDictionaryByUserId(req, res, userId);
+}
+
 async function saveTranslation(req, res) {
   const { id } = req.params;
   return await dictionaries.saveTranslation(req, res, id);
@@ -27,6 +32,7 @@ async function createDictionary(req, res) {
 
 module.exports = {
   getDictionary,
+  getDictionaryByUserId,
   saveTranslation,
   deleteTranslation,
   createTranslateFrom,

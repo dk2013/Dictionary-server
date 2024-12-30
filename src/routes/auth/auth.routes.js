@@ -1,6 +1,6 @@
-// auth.routes.js
 const express = require("express");
 const passport = require("passport");
+const { transformUserFromDbToClient } = require("../../Utils/user");
 
 const authRouter = express.Router();
 
@@ -26,8 +26,8 @@ authRouter.get(
 
 // Logout route
 authRouter.get("/auth/logout", (req, res, next) => {
-  req.logout((err) => {
-    if (err) return next(err);
+  req.logout((e) => {
+    if (e) return next(e);
     res.redirect("/");
   });
 });
@@ -38,7 +38,7 @@ authRouter.get("/auth/profile", (req, res) => {
     return res.status(401).json({ message: "Not authenticated" });
   }
   // user is logged in, show profile (or user data)
-  res.json(req.user);
+  res.json(transformUserFromDbToClient(req.user));
 });
 
 module.exports = authRouter;

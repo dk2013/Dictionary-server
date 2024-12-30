@@ -105,6 +105,8 @@ const dictionary = {
 */
 
 const mongoose = require("mongoose");
+const { transformDictionaryFromDbToClient } = require("../Utils/dictionary");
+const { ObjectId } = mongoose.Types;
 
 const TranslationSchema = new mongoose.Schema(
   {
@@ -112,7 +114,7 @@ const TranslationSchema = new mongoose.Schema(
     modified: { type: Date, required: false },
     order: { type: Number, required: false },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const TranslationToSchema = new mongoose.Schema(
@@ -120,7 +122,7 @@ const TranslationToSchema = new mongoose.Schema(
     type: Object,
     of: [TranslationSchema], // Keys like 'RUS', 'ESP' map to arrays of translations
   },
-  { _id: false }
+  { _id: false },
 );
 
 const WordSchema = new mongoose.Schema(
@@ -128,7 +130,7 @@ const WordSchema = new mongoose.Schema(
     type: Object,
     of: TranslationToSchema, // Keys like 'water' map to a TranslationToSchema
   },
-  { _id: false }
+  { _id: false },
 );
 
 const TranslationFromSchema = new mongoose.Schema(
@@ -136,7 +138,7 @@ const TranslationFromSchema = new mongoose.Schema(
     type: Object,
     of: WordSchema, // Keys like 'ENG' or 'RUS' map to WordSchema
   },
-  { _id: false }
+  { _id: false },
 );
 // Main schema for the dictionaries collection
 const DictionarySchema = new mongoose.Schema({
@@ -148,26 +150,43 @@ const Dictionary = mongoose.model("Dictionary", DictionarySchema);
 
 async function getDictionary(req, res, id) {
   try {
-    const dictionaryObj = await Dictionary.findById(id);
+    const dictionaryObj = getDictionaryObject(id);
     res.status(200).json(dictionaryObj?.dictionary);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 }
 
-// This method is for testing
+async function getDictionaryByUserId(req, res, userId) {
+  try {
+    const dictionaryObj = await getDictionaryObjectByUserId(userId);
+    res.status(200).json(transformDictionaryFromDbToClient(dictionaryObj));
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+}
+
+/**
+ * This method is for testing
+ *
+ * Creates or updates the translation "from" field in a dictionary object.
+ * Ensures that a source language (e.g., "ENG") exists in the dictionary
+ * and adds it if necessary. Updates the associated database object and responds
+ * with the relevant data.
+ *
+ * @param {Object} req - The HTTP request object containing request details.
+ * @param {Object} res - The HTTP response object used to send a response.
+ * @param {string} id - The unique identifier for the dictionary object to update.
+ * @return {Promise<void>} A promise that resolves when the operation is completed.
+ */
 async function createTranslationFrom(req, res, id) {
   try {
-    const dictionaryObj = await Dictionary.findById(id);
-
-    if (!dictionaryObj) {
-      return res.status(404).json({ message: "Dictionary not found" });
-    }
+    const dictionaryObj = await getDictionaryObject(id);
 
     console.log("dictionaryObj:", dictionaryObj);
     console.log(
       "dictionaryObj instanceof Map (bool):",
-      dictionaryObj instanceof Map
+      dictionaryObj instanceof Map,
     );
 
     const translationFrom = "ENG";
@@ -201,7 +220,17 @@ async function createTranslationFrom(req, res, id) {
   }
 }
 
-// This method is for testing
+/**
+ * This method is for testing
+ *
+ * Creates a new dictionary document for a specific user with an initial empty structure.
+ * Saves the dictionary to the database and returns the created dictionary object in the response.
+ *
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} res - The HTTP response object.
+ * @param {string} userId - The ID of the user for whom the dictionary is being created.
+ * @return {Promise<void>} - A promise indicating the completion of the dictionary creation process.
+ */
 async function createDictionary(req, res, userId) {
   try {
     // Create a new document with an empty dictionary Map
@@ -228,12 +257,8 @@ async function saveTranslation(req, res, id) {
   const { newWord, translation, translationFrom, translationTo } = req.body;
 
   try {
-    const dictionaryObj = await Dictionary.findById(id);
-    if (!dictionaryObj) {
-      return res.status(404).json({ message: "Dictionary not found" });
-    }
-
-    if (!"dictionary" in dictionaryObj) {
+    const dictionaryObj = await getDictionaryObject(id);
+    if ((!"dictionary") in dictionaryObj) {
       return res.status(404).json({ message: "dictionary property is empty" });
     }
 
@@ -241,7 +266,7 @@ async function saveTranslation(req, res, id) {
       dictionaryObj.dictionary,
       newWord,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Delete current reversed translation
@@ -255,7 +280,7 @@ async function saveTranslation(req, res, id) {
       newWord,
       translation,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Save reversed translation
@@ -264,7 +289,7 @@ async function saveTranslation(req, res, id) {
       translation,
       newWord,
       translationTo,
-      translationFrom
+      translationFrom,
     );
 
     dictionaryObj.markModified("dictionary");
@@ -286,20 +311,13 @@ async function deleteTranslation(req, res, id) {
   console.log("params:", { newWord, translationFrom, translationTo });
 
   try {
-    const dictionaryObj = await Dictionary.findById(id);
-    if (!dictionaryObj) {
-      return res.status(404).json({ message: "Dictionary not found" });
-    }
-
-    if (!"dictionary" in dictionaryObj) {
-      return res.status(404).json({ message: "dictionary property is empty" });
-    }
+    const dictionaryObj = await getDictionaryObject(id);
 
     const currentTranslation = getCurrentTranslation(
       dictionaryObj.dictionary,
       newWord,
       translationFrom,
-      translationTo
+      translationTo,
     );
 
     // Delete current direct translation
@@ -326,7 +344,7 @@ async function deleteTranslation(req, res, id) {
     await dictionaryObj.save();
 
     res.status(200).json({
-      message: "Translation saved successfully",
+      message: "Translation deleted successfully",
       dictionary: dictionaryObj.dictionary,
     });
   } catch (e) {
@@ -340,7 +358,7 @@ function prepareTranslationObjectToSave(
   newWord,
   translation,
   translationFrom,
-  translationTo
+  translationTo,
 ) {
   const sourceLang = dictionary[translationFrom] || {};
   const wordTranslations = sourceLang[newWord] || {};
@@ -369,7 +387,7 @@ function getCurrentTranslation(
   dictionary,
   newWord,
   translationFrom,
-  translationTo
+  translationTo,
 ) {
   if (
     dictionary[translationFrom]?.[newWord]?.[translationTo]?.[0]?.translation
@@ -378,8 +396,35 @@ function getCurrentTranslation(
   }
 }
 
+async function getDictionaryObjectByUserId(userId) {
+  const dictionaryObj = await Dictionary.findOne({
+    user_id: new ObjectId(userId),
+  });
+  validateDictionaryObject(dictionaryObj);
+
+  return dictionaryObj;
+}
+
+async function getDictionaryObject(id) {
+  const dictionaryObj = await Dictionary.findById(id);
+  validateDictionaryObject(dictionaryObj);
+
+  return dictionaryObj;
+}
+
+function validateDictionaryObject(dictionaryObj) {
+  if (!dictionaryObj) {
+    return res.status(404).json({ message: "Dictionary not found" });
+  }
+
+  if ((!"dictionary") in dictionaryObj) {
+    return res.status(404).json({ message: "dictionary property is empty" });
+  }
+}
+
 module.exports = {
   getDictionary,
+  getDictionaryByUserId,
   saveTranslation,
   deleteTranslation,
   createTranslationFrom,

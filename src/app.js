@@ -22,6 +22,7 @@ connectDB();
 app.use(
   cors({
     origin: BASE_CLIENT_URL,
+    credentials: true,
   }),
 );
 app.use(
@@ -29,6 +30,11 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: true, // ensures the browser only sends cookie over https
+      sameSite: "none", //TODO: recheck it on prod // needed if front-end is on a different domain or port
+    },
   }),
 );
 app.use(passport.initialize());
