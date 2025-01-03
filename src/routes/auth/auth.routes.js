@@ -7,7 +7,10 @@ const authRouter = express.Router();
 // Initiates Google OAuth flow
 authRouter.get(
   "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] }),
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account", // <-- forces the "choose account" screen
+  }),
 );
 
 // Callback URL that Google will redirect to after user consents
@@ -18,7 +21,7 @@ authRouter.get(
     successRedirect: process.env.BASE_CLIENT_URL,
     // session: true, // It's not necessary to specify this option, because the default value is true
   }),
-  (req, res) => {
+  () => {
     // Successful authentication
     console.log("Google callback - auth success");
   },
