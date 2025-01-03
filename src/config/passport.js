@@ -1,6 +1,10 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/user.model");
+const { User, createUser } = require("../models/user.model");
+const {
+  dummyDictionary,
+  createDictionary,
+} = require("../models/dictionary.model");
 require("dotenv").config();
 
 passport.use(
@@ -14,12 +18,15 @@ passport.use(
       try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
-          user = new User({
+          const newUser = {
             googleId: profile.id,
             displayName: profile.displayName,
             email: profile.emails[0].value,
-          });
-          await user.save();
+          };
+          user = await createUser(newUser);
+
+          // Create a default dictionary
+          await createDictionary(user.id, dummyDictionary);
         }
         done(null, user);
       } catch (e) {

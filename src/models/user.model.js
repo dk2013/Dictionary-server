@@ -8,4 +8,10 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", UserSchema);
 
-module.exports = User;
+async function createUser(user) {
+  const newUser = new User(user);
+  await newUser.save();
+  return newUser;
+}
+
+module.exports = { User, createUser };
