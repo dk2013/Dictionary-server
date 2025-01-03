@@ -1,5 +1,4 @@
-/*
-const dictionary = {
+const dummyDictionary = {
   ENG: {
     water: {
       RUS: [
@@ -102,7 +101,6 @@ const dictionary = {
     },
   },
 };
-*/
 
 const mongoose = require("mongoose");
 const { transformDictionaryFromDbToClient } = require("../Utils/dictionary");
@@ -220,36 +218,16 @@ async function createTranslationFrom(req, res, id) {
   }
 }
 
-/**
- * This method is for testing
- *
- * Creates a new dictionary document for a specific user with an initial empty structure.
- * Saves the dictionary to the database and returns the created dictionary object in the response.
- *
- * @param {Object} req - The HTTP request object.
- * @param {Object} res - The HTTP response object.
- * @param {string} userId - The ID of the user for whom the dictionary is being created.
- * @return {Promise<void>} - A promise indicating the completion of the dictionary creation process.
- */
-async function createDictionary(req, res, userId) {
+async function createDictionary(userId, dictionary = null) {
+  let dictionaryObj;
   try {
-    // Create a new document with an empty dictionary Map
-    const newDict = new Dictionary({
-      dictionary: { ENG: {} }, // Starts as an empty dictionary
+    dictionaryObj = new Dictionary({
+      dictionary: dictionary ? dictionary : {},
       user_id: userId,
     });
-
-    console.log("newDict:", newDict);
-
-    await newDict.save();
-
-    res.status(200).json({
-      message: "Dictionary created successfully",
-      dictionaryObj: newDict,
-    });
+    await dictionaryObj.save();
   } catch (e) {
     console.error("Error creating new dictionary:", e);
-    res.status(500).json({ message: e.message });
   }
 }
 
@@ -429,4 +407,5 @@ module.exports = {
   deleteTranslation,
   createTranslationFrom,
   createDictionary,
+  dummyDictionary,
 };
