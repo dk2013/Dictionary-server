@@ -2,11 +2,14 @@
   "name": "dictionary-server",
   "version": "1.0.0",
   "description": "Dictionary API",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
-    "watch": "nodemon src/server.js",
+    "watch": "nodemon src/server.ts",
     "test": "jest",
-    "start": "PORT=8000 node src/server.js"
+    "start": "PORT=8000 node src/server.ts",
+    "build": "tsc",
+    "dev": "ts-node src/server.ts",
+    "watch-dev": "nodemon --watch src --exec ts-node src/server.ts"
   },
   "keywords": [],
   "author": "Dmitriy Korytnyi",
@@ -23,9 +26,19 @@
     "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.1",
+    "@types/mongoose": "^5.11.96",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.10.5",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.16",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
     "prettier": "^3.2.4",
-    "supertest": "^6.3.4"
+    "supertest": "^6.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }
