@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import passport from "passport";
-import { transformUserFromDbToClient } from "../../Utils/user";
+import { transformUserFromDbToClient } from "../../utils/user";
 import { IUserDocument } from "../../types/user";
 
 const authRouter = Router();

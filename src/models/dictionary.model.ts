@@ -1,6 +1,6 @@
 import mongoose, { Document } from "mongoose";
 import { Request, Response } from "express";
-import { transformDictionaryFromDbToClient } from "../Utils/dictionary";
+import { transformDictionaryFromDbToClient } from "../utils/dictionary";
 
 // TODO: refine this interface to get more explicit types.
 export interface IDictionary {
